@@ -12,4 +12,5 @@ dependencies:
 
 flutter:
   assets:
-    - assets/sahih_bukhari.json
+    - assets/data/hadiths.json
+

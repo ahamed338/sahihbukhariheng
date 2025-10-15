@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/hadith_list.dart';
+import 'screens/hadith_page.dart';
 
 void main() {
   runApp(const HadithApp());
@@ -12,10 +12,8 @@ class HadithApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sahih Bukhari - English',
-      theme: ThemeData(
-        primarySwatch: Colors.orange,
-      ),
-      home: const HadithListScreen(),
+      theme: ThemeData(primarySwatch: Colors.orange),
+      home: const HadithPageScreen(),
     );
   }
 }
