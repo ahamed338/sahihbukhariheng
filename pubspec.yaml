@@ -1,0 +1,15 @@
+name: sahihbukhariheng
+description: A simple offline Sahih Bukhari Hadith reader
+publish_to: 'none' # since this is a personal project
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.5.3
+
+flutter:
+  assets:
+    - assets/sahih_bukhari.json
