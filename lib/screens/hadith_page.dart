@@ -12,6 +12,7 @@ class HadithPageScreen extends StatefulWidget {
 
 class _HadithPageScreenState extends State<HadithPageScreen> {
   List<dynamic> _hadithList = [];
+  late PageController _pageController;
   int _currentIndex = 0;
 
   @override
@@ -44,30 +45,19 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
     setState(() {
       _hadithList = allHadiths;
       _currentIndex = lastReadIndex < _hadithList.length ? lastReadIndex : 0;
+      _pageController = PageController(initialPage: _currentIndex);
     });
   }
 
-  void _saveLastRead() async {
+  void _saveLastRead(int index) async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('last_read_index', _currentIndex);
+    prefs.setInt('last_read_index', index);
   }
 
-  void _nextHadith() {
-    if (_currentIndex < _hadithList.length - 1) {
-      setState(() {
-        _currentIndex++;
-      });
-      _saveLastRead();
-    }
-  }
-
-  void _previousHadith() {
-    if (_currentIndex > 0) {
-      setState(() {
-        _currentIndex--;
-      });
-      _saveLastRead();
-    }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -78,61 +68,62 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
       );
     }
 
-    final hadith = _hadithList[_currentIndex];
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Hadith ${_currentIndex + 1} / ${_hadithList.length}'),
       ),
-      body: GestureDetector(
-        onTapDown: (TapDownDetails details) {
-          final width = MediaQuery.of(context).size.width;
-          if (details.globalPosition.dx < width / 2) {
-            _previousHadith();
-          } else {
-            _nextHadith();
-          }
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: _hadithList.length,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          _saveLastRead(index);
         },
-        child: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    hadith['info'],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Colors.orange,
+        itemBuilder: (context, index) {
+          final hadith = _hadithList[index];
+          return Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.white,
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hadith['info'],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.orange,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    hadith['by'],
-                    style: const TextStyle(
-                      fontStyle: FontStyle.italic,
-                      fontSize: 16,
-                      color: Colors.blueGrey,
+                    const SizedBox(height: 8),
+                    Text(
+                      hadith['by'],
+                      style: const TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 16,
+                        color: Colors.blueGrey,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    hadith['text'],
-                    style: const TextStyle(
-                      fontSize: 20,
-                      height: 1.5,
-                      color: Colors.black87,
+                    const SizedBox(height: 16),
+                    Text(
+                      hadith['text'],
+                      style: const TextStyle(
+                        fontSize: 20,
+                        height: 1.5,
+                        color: Colors.black87,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
