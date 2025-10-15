@@ -11,133 +11,127 @@ class HadithPageScreen extends StatefulWidget {
 }
 
 class _HadithPageScreenState extends State<HadithPageScreen> {
-  List<Map<String, String>> allHadiths = [];
-  int currentIndex = 0;
-  bool isLoading = true;
+  List<dynamic> _hadithList = [];
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    loadHadiths();
+    _loadHadiths();
   }
 
-  Future<void> loadHadiths() async {
-    try {
-      // Load JSON
-      final String jsonString = await rootBundle.loadString('assets/data/hadiths.json');
-      final List<dynamic> volumes = json.decode(jsonString);
+  Future<void> _loadHadiths() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastReadIndex = prefs.getInt('last_read_index') ?? 0;
 
-      // Flatten all hadiths
-      List<Map<String, String>> hadithList = [];
-      for (var volume in volumes) {
-        for (var book in volume['books']) {
-          for (var hadith in book['hadiths']) {
-            hadithList.add({
-              'info': hadith['info'],
-              'by': hadith['by'],
-              'text': hadith['text'],
-            });
-          }
+    final String data = await rootBundle.loadString('assets/data/hadiths.json');
+    final List<dynamic> jsonData = json.decode(data);
+
+    // Flatten the structure: [volume -> books -> hadiths] into a single list
+    List<dynamic> allHadiths = [];
+    for (var volume in jsonData) {
+      for (var book in volume['books']) {
+        for (var hadith in book['hadiths']) {
+          allHadiths.add({
+            'info': hadith['info'],
+            'by': hadith['by'],
+            'text': hadith['text'],
+          });
         }
       }
-
-      // Load last read index
-      final prefs = await SharedPreferences.getInstance();
-      int lastIndex = prefs.getInt('last_read_index') ?? 0;
-
-      setState(() {
-        allHadiths = hadithList;
-        currentIndex = lastIndex < hadithList.length ? lastIndex : 0;
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading hadiths: $e');
-      setState(() {
-        isLoading = false;
-      });
     }
+
+    setState(() {
+      _hadithList = allHadiths;
+      _currentIndex = lastReadIndex < _hadithList.length ? lastReadIndex : 0;
+    });
   }
 
-  void nextHadith() {
-    if (currentIndex < allHadiths.length - 1) {
-      setState(() {
-        currentIndex++;
-      });
-      saveLastRead();
-    }
-  }
-
-  void previousHadith() {
-    if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-      });
-      saveLastRead();
-    }
-  }
-
-  Future<void> saveLastRead() async {
+  void _saveLastRead() async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('last_read_index', currentIndex);
+    prefs.setInt('last_read_index', _currentIndex);
+  }
+
+  void _nextHadith() {
+    if (_currentIndex < _hadithList.length - 1) {
+      setState(() {
+        _currentIndex++;
+      });
+      _saveLastRead();
+    }
+  }
+
+  void _previousHadith() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+      });
+      _saveLastRead();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (_hadithList.isEmpty) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (allHadiths.isEmpty) {
-      return const Scaffold(
-        body: Center(child: Text('No Hadith found')),
-      );
-    }
-
-    final hadith = allHadiths[currentIndex];
+    final hadith = _hadithList[_currentIndex];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hadith ${currentIndex + 1} / ${allHadiths.length}'),
+        title: Text('Hadith ${_currentIndex + 1} / ${_hadithList.length}'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              hadith['info'] ?? '',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hadith['by'] ?? '',
-              style: const TextStyle(fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  hadith['text'] ?? '',
-                  style: const TextStyle(fontSize: 18),
-                ),
+      body: GestureDetector(
+        onTapDown: (TapDownDetails details) {
+          final width = MediaQuery.of(context).size.width;
+          if (details.globalPosition.dx < width / 2) {
+            _previousHadith();
+          } else {
+            _nextHadith();
+          }
+        },
+        child: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hadith['info'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hadith['by'],
+                    style: const TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontSize: 16,
+                      color: Colors.blueGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    hadith['text'],
+                    style: const TextStyle(
+                      fontSize: 20,
+                      height: 1.5,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: previousHadith,
-                  child: const Text('Previous'),
-                ),
-                ElevatedButton(
-                  onPressed: nextHadith,
-                  child: const Text('Next'),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
