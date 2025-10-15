@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:share_plus/share_plus.dart'; // Ensure this package is added to pubspec.yaml
+import 'package:share_plus/share_plus.dart';
 
 // --- Hadith Data Model ---
 class Hadith {
@@ -24,8 +24,6 @@ class Hadith {
 // --- Hadith Service for Data Loading ---
 class HadithService {
   Future<List<Hadith>> loadAllHadiths() async {
-    // Loads the 4MB JSON file completely. 
-    // Remember to consider an SQLite solution later for better performance.
     final String data = await rootBundle.loadString('assets/data/hadiths.json');
     final List<dynamic> jsonResult = json.decode(data);
 
@@ -59,25 +57,31 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
   List<Hadith> _hadiths = [];
   int _currentIndex = 0;
   bool _isDarkMode = false;
+  double _fontSize = 18.0; // 🎯 NEW: Default font size
   PageController? _pageController;
 
   @override
   void initState() {
     super.initState();
+    // 🎯 UPDATED: Combine data loading and settings loading
     _hadithsFuture = _initializeData(); 
   }
 
   Future<List<Hadith>> _initializeData() async {
     final loadedHadiths = await HadithService().loadAllHadiths();
     final prefs = await SharedPreferences.getInstance();
+    
+    // Load persisted settings
     int lastIndex = prefs.getInt('last_read_index') ?? 0;
+    // 🎯 NEW: Load saved font size, default to 18.0
+    double savedFontSize = prefs.getDouble('hadith_font_size') ?? 18.0; 
 
     if (mounted) {
       setState(() {
         _hadiths = loadedHadiths;
-        // Ensure index is within bounds
         _currentIndex = lastIndex.clamp(0, _hadiths.length > 0 ? _hadiths.length - 1 : 0);
         _pageController = PageController(initialPage: _currentIndex);
+        _fontSize = savedFontSize; // Apply loaded font size
       });
     }
     return loadedHadiths;
@@ -88,10 +92,17 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
     await prefs.setInt('last_read_index', _currentIndex);
   }
 
+  // 🎯 NEW: Save the current font size to SharedPreferences
+  Future<void> _saveFontSize(double size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('hadith_font_size', size);
+  }
+
   void _toggleTheme() {
     setState(() {
       _isDarkMode = !_isDarkMode;
     });
+    // NOTE: Theme persistence (saving _isDarkMode) is a separate upgrade.
   }
 
   // Function to share the current Hadith
@@ -119,7 +130,6 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
         
     await Clipboard.setData(ClipboardData(text: copyText));
 
-    // Provide user feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -128,6 +138,65 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
         ),
       );
     }
+  }
+
+  // 🎯 NEW: Function to show the font size settings dialog
+  void _showSettingsDialog() {
+    double tempFontSize = _fontSize;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Text Size'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Slider(
+                    value: tempFontSize,
+                    min: 12.0, // Minimum readable size
+                    max: 30.0, // Maximum size
+                    divisions: 18,
+                    label: tempFontSize.round().toString(),
+                    onChanged: (double value) {
+                      setDialogState(() {
+                        tempFontSize = value;
+                      });
+                    },
+                    onChangeEnd: (double value) {
+                      // Apply size instantly for preview
+                      setState(() {
+                        _fontSize = value;
+                      });
+                      // Save the new size
+                      _saveFontSize(value);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Example Text',
+                    style: TextStyle(
+                      fontSize: tempFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: _isDarkMode ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
 
@@ -155,6 +224,11 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
             title: Text('Hadith ${_currentIndex + 1} / ${_hadiths.length}'),
             backgroundColor: _isDarkMode ? Colors.grey[900] : Colors.orange,
             actions: [
+              // 🎯 NEW: Settings Button
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: _showSettingsDialog,
+              ),
               // Share Button
               IconButton(
                 icon: const Icon(Icons.share),
@@ -211,7 +285,7 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
                                 hadith.info,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: _fontSize - 2, // Use dynamic size, slightly smaller
                                   color: _isDarkMode ? Colors.white : Colors.black,
                                 ),
                               ),
@@ -220,7 +294,7 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
                                 hadith.by,
                                 style: TextStyle(
                                   fontStyle: FontStyle.italic,
-                                  fontSize: 14,
+                                  fontSize: _fontSize - 4, // Use dynamic size, smaller still
                                   color: _isDarkMode
                                       ? Colors.white70
                                       : Colors.black87,
@@ -230,7 +304,7 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
                               Text(
                                 hadith.text,
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: _fontSize, // 🎯 Use the main dynamic size here
                                   color: _isDarkMode ? Colors.white : Colors.black,
                                 ),
                               ),
