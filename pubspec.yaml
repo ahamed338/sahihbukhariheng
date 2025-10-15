@@ -9,6 +9,7 @@ dependencies:
   flutter:
     sdk: flutter
   shared_preferences: ^2.5.3
+  share_plus: ^12.0.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.10.0
@@ -19,5 +20,6 @@ flutter_icons:
   image_path: "assets/icons/b_icon.png"
 
 flutter:
+  uses-material-design: true 
   assets:
     - assets/data/hadiths.json
