@@ -21,11 +21,16 @@ jobs:
         run: flutter pub get
 
       # 2. Decode and save Keystore file
+# 2. Decode and save Keystore file
       - name: Decode Keystore
         id: decode_keystore
         run: |
+          # The key change is using ${{ secrets.KEYSTORE_BASE64 }} here
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
+          
+          # This sets the path for the next step (Create key.properties)
           echo "KEYSTORE_PATH=$(pwd)/android/app/release.jks" >> $GITHUB_ENV
+        shell: /usr/bin/bash -e {0}
           
       # 3. Create key.properties file for Gradle
       - name: Create key.properties
