@@ -2,44 +2,46 @@ name: Flutter Android Release
 
 on:
   push:
-    # Trigger only when a tag starting with 'v' (e.g., v1.0.0) is pushed
     tags:
       - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
       # 1. Setup Flutter
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x' # Use your Flutter version
+          flutter-version: '3.24.0' # pin version for stability
+
+      - name: Clean Flutter project
+        run: flutter clean
 
       - name: Install dependencies
         run: flutter pub get
 
       # 2. Decode and save Keystore file
-# 2. Decode and save Keystore file
       - name: Decode Keystore
         id: decode_keystore
         run: |
-          # The key change is using ${{ secrets.KEYSTORE_BASE64 }} here
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.jks
-          
-          # This sets the path for the next step (Create key.properties)
           echo "KEYSTORE_PATH=$(pwd)/android/app/release.jks" >> $GITHUB_ENV
         shell: /usr/bin/bash -e {0}
-          
-      # 3. Create key.properties file for Gradle
+
+      # 3. Create key.properties
       - name: Create key.properties
         run: |
-          echo "storeFile=$KEYSTORE_PATH" >> android/key.properties
+          echo "storeFile=$KEYSTORE_PATH" > android/key.properties
           echo "keyAlias=upload" >> android/key.properties
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
-          
+
       # 4. Build Signed APK
       - name: Build Flutter APK
         run: flutter build apk --release
@@ -48,7 +50,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/app/outputs/flutter/apk/app-release.apk
+          files: build/app/outputs/flutter-apk/app-release.apk
           name: Release ${{ github.ref_name }}
           body: See the changes in this version.
           draft: false
