@@ -221,7 +221,7 @@ class _HadithPageScreenState extends State<HadithPageScreen> {
         return Scaffold(
           backgroundColor: _isDarkMode ? Colors.black : Colors.white,
           appBar: AppBar(
-            title: Text('Hadith ${_currentIndex + 1} / ${_hadiths.length}'),
+            title: Text('${_currentIndex + 1} / ${_hadiths.length}'),
             backgroundColor: _isDarkMode ? Colors.grey[900] : Colors.orange,
             actions: [
               // 🎯 NEW: Settings Button
