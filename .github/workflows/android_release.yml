@@ -20,7 +20,7 @@ jobs:
       # 2. Setup Flutter
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0' # Pin to a specific Flutter version
+          flutter-version: '3.35.6' # Pin to a specific Flutter version
 
       # 3. Clean project (optional but recommended)
       - name: Clean Flutter project
