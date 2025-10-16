@@ -2,9 +2,11 @@ name: Flutter Android Release
 
 on:
   push:
-    # Trigger only when a tag starting with 'v' (e.g., v1.0.0) is pushed
+    branches:
+      - main       # or your main development branch
     tags:
       - 'v*'
+
 
 permissions:
   contents: write   # Needed for softprops/action-gh-release to work
