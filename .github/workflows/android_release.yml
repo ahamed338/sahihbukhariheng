@@ -2,31 +2,35 @@ name: Flutter Android Release
 
 on:
   push:
+    # Trigger only when a tag starting with 'v' (e.g., v1.0.0) is pushed
     tags:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: write   # Needed for softprops/action-gh-release to work
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout repository
       - uses: actions/checkout@v4
 
-      # 1. Setup Flutter
+      # 2. Setup Flutter
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0' # pin version for stability
+          flutter-version: '3.24.0' # Pin to a specific Flutter version
 
+      # 3. Clean project (optional but recommended)
       - name: Clean Flutter project
         run: flutter clean
 
+      # 4. Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # 2. Decode and save Keystore file
+      # 5. Decode and save Keystore file
       - name: Decode Keystore
         id: decode_keystore
         run: |
@@ -34,7 +38,7 @@ jobs:
           echo "KEYSTORE_PATH=$(pwd)/android/app/release.jks" >> $GITHUB_ENV
         shell: /usr/bin/bash -e {0}
 
-      # 3. Create key.properties
+      # 6. Create key.properties file for Gradle
       - name: Create key.properties
         run: |
           echo "storeFile=$KEYSTORE_PATH" > android/key.properties
@@ -42,11 +46,18 @@ jobs:
           echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/key.properties
 
-      # 4. Build Signed APK
+      # 7. Build signed Flutter APK
       - name: Build Flutter APK
         run: flutter build apk --release
 
-      # 5. Create GitHub Release
+      # 8. Upload APK as a workflow artifact (optional but useful)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # 9. Create GitHub Release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
